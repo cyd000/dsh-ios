@@ -31,6 +31,29 @@ jobs:
           pkg-config --modversion libarchive
           pkg-config --cflags --libs libarchive
 
+      - name: Fix uname buffer overflow
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("ish-arm64/kernel/uname.c")
+          source = p.read_text()
+
+          old = "strcpy(uts->hostname, hostname);"
+          new = (
+              'snprintf(uts->hostname, '
+              'sizeof(uts->hostname), "%s", hostname);'
+          )
+
+          if old not in source:
+              raise SystemExit(
+                  "Expected hostname copy not found"
+              )
+
+          p.write_text(source.replace(old, new, 1))
+          print("Patched hostname copy successfully")
+          PY
+
       - name: Build emulator
         run: |
           make emulator
@@ -59,4 +82,5 @@ jobs:
           path: build/root.tar.gz
           if-no-files-found: error
           retention-days: 3
+
 
