@@ -29,9 +29,28 @@ jobs:
         run: |
           make emulator
 
+    
+      - name: Diagnose fakefsify
+        run: |
+          echo "=== Search fakefsify files ==="
+          find . -iname '*fakefsify*' -print
+
+          echo "=== Built tools ==="
+          ls -lah ish-arm64/build-arm64-release/tools || true
+
+          echo "=== Build script ==="
+          sed -n '1,220p' scripts/build-rootfs.sh
+
+          echo "=== Build definitions ==="
+          grep -R -n 'fakefsify' \
+            Makefile ish-arm64/meson.build \
+            ish-arm64/meson_options.txt \
+            ish-arm64/tools scripts 2>/dev/null || true
+
       - name: Build Linux rootfs
         run: |
           make rootfs
+
 
       - name: Upload rootfs artifact
         uses: actions/upload-artifact@v4
