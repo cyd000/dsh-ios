@@ -1,31 +1,42 @@
 
-name: DSHIOS Build Environment Check
+name: DSHIOS Build
 
 on:
   workflow_dispatch:
 
 jobs:
-  check:
+  build:
     runs-on: macos-15
+    timeout-minutes: 90
 
     steps:
-      - name: Checkout source
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: System information
+      - name: Check environment
         run: |
           uname -m
-          sw_vers
           xcodebuild -version
-          xcode-select -p
+          node --version
 
-      - name: Check build tools
+      - name: Install dependencies
         run: |
-          for tool in brew node npm meson ninja lld; do
-            echo "Checking $tool"
-            command -v "$tool" || true
-          done
+          brew install meson ninja lld
+          gem install xcodeproj --user-install
+          echo "$(brew --prefix lld)/bin" >> "$GITHUB_PATH"
 
-      - name: Check Xcode project
+      - name: Build emulator
         run: |
-          xcodebuild -list -project DSH.xcodeproj
+          make emulator
+
+      - name: Build Linux rootfs
+        run: |
+          make rootfs
+
+      - name: Upload rootfs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-rootfs
+          path: build/root.tar.gz
+          if-no-files-found: error
+          retention-days: 3
