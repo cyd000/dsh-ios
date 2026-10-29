@@ -26,38 +26,30 @@ jobs:
           echo "$(brew --prefix lld)/bin" >> "$GITHUB_PATH"
           echo "PKG_CONFIG_PATH=$(brew --prefix libarchive)/lib/pkgconfig" >> "$GITHUB_ENV"
 
+      - name: Verify libarchive
+        run: |
+          pkg-config --modversion libarchive
+          pkg-config --cflags --libs libarchive
+
       - name: Build emulator
         run: |
           make emulator
 
-      - name: Configure emulator tools
+      - name: Verify fakefsify
         run: |
-          meson configure ish-arm64/build-arm64-release
-          meson setup ish-arm64/build-arm64-release \
-            --reconfigure \
-            -Dguest_arch=arm64 \
-            --buildtype=release
-          ninja -C ish-arm64/build-arm64-release
+          echo "=== Built tools ==="
           ls -lah ish-arm64/build-arm64-release/tools
 
-      - name: Diagnose fakefsify
-        run: |
-          echo "=== Search fakefsify files ==="
-          find . -iname '*fakefsify*' -print
+          echo "=== Check fakefsify ==="
+          test -x ish-arm64/build-arm64-release/tools/fakefsify
 
-          echo "=== Built tools ==="
-          ls -lah ish-arm64/build-arm64-release/tools || true
+          echo "=== Check unfakefsify ==="
+          test -x ish-arm64/build-arm64-release/tools/unfakefsify
 
-          echo "=== Build definitions ==="
-          grep -R -n 'fakefsify' \
-            Makefile ish-arm64/meson.build \
-            ish-arm64/meson_options.txt \
-            ish-arm64/tools scripts 2>/dev/null || true
+          echo "=== All required tools exist ==="
 
       - name: Build Linux rootfs
         run: |
-          test -x ish-arm64/build-arm64-release/tools/fakefsify
-          test -x ish-arm64/build-arm64-release/tools/unfakefsify
           make rootfs
 
       - name: Upload rootfs artifact
@@ -67,3 +59,4 @@ jobs:
           path: build/root.tar.gz
           if-no-files-found: error
           retention-days: 3
+
